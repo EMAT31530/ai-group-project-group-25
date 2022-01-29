@@ -1,5 +1,8 @@
 import pandas as pd
+import xlrd
+import ast
 
+# create a dataframe for each calendar year
 matches_2010 = pd.read_excel('Full Tennis dataset.xls', sheet_name='2010')
 matches_2011 = pd.read_excel('Full Tennis dataset.xls', sheet_name='2011')
 matches_2012 = pd.read_excel('Full Tennis dataset.xls', sheet_name='2012')
@@ -13,22 +16,19 @@ matches_2019 = pd.read_excel('Full Tennis dataset.xls', sheet_name='2019')
 matches_2020 = pd.read_excel('Full Tennis dataset.xls', sheet_name='2020')
 matches_2021 = pd.read_excel('Full Tennis dataset.xls', sheet_name='2021')
 
+sheet_names = [matches_2010, matches_2011, matches_2012, matches_2013, matches_2014, matches_2015, matches_2016, matches_2017, matches_2018, matches_2019, matches_2020, matches_2021]
+
+# take off all the betting odds so that all the dataframes are in the same format
 betting_odds1 = ['B365W', 'B365L', 'EXW', 'EXL', 'LBW', 'LBL', 'PSW', 'PSL', 'SJW', 'SJL', 'MaxW', 'MaxL', 'AvgW', 'AvgL']
 betting_odds2 = ['B365W', 'B365L', 'EXW', 'EXL', 'LBW', 'LBL', 'PSW', 'PSL', 'MaxW', 'MaxL', 'AvgW', 'AvgL']
 betting_odds3 = ['B365W', 'B365L', 'PSW', 'PSL', 'MaxW', 'MaxL', 'AvgW', 'AvgL']
 
-matches_2010 = matches_2010.drop(columns = betting_odds1)
-matches_2011 = matches_2011.drop(columns = betting_odds1)
-matches_2012 = matches_2012.drop(columns = betting_odds1)
-matches_2013 = matches_2013.drop(columns = betting_odds1)
-matches_2014 = matches_2014.drop(columns = betting_odds1)
-matches_2015 = matches_2015.drop(columns = betting_odds2)
-matches_2016 = matches_2016.drop(columns = betting_odds2)
-matches_2017 = matches_2017.drop(columns = betting_odds2)
-matches_2018 = matches_2018.drop(columns = betting_odds2)
-matches_2019 = matches_2019.drop(columns = betting_odds3)
-matches_2020 = matches_2020.drop(columns = betting_odds3)
-matches_2021 = matches_2021.drop(columns = betting_odds3)
+for data in sheet_names[0:5]:
+    data = data.drop(columns = betting_odds1)
+for data in sheet_names[5:9]:
+    data = data.drop(columns = betting_odds2)
+for data in sheet_names[9:12]:
+    data = data.drop(columns = betting_odds3)
 
-all_matches = pd.concat([matches_2010, matches_2011, matches_2012, matches_2013, matches_2014, matches_2015, matches_2016, matches_2017, matches_2018, matches_2019, matches_2020, matches_2021], ignore_index = True)
-
+# put all the dataframes into one large chronological dataframe, including all data from 2010-2021
+all_matches = pd.concat(sheet_names, ignore_index = True)
