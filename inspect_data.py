@@ -88,12 +88,16 @@ def max_rank(date):
 
 def current_rank(player, date):
     match_number = 0
+    rank = 'no previous'
     ind_date = find(date)
     while match_number < ind_date:
-        if player == winner[match_number]:
-            rank = rank_winner[match_number]
-        elif player == loser[match_number]:
-            rank = rank_loser[match_number]
+        no_match = ind_date - match_number
+        if player == winner[no_match]:
+            rank = rank_winner[no_match]
+            return rank
+        elif player == loser[no_match]:
+            rank = rank_loser[no_match]
+            return rank
         match_number += 1
     return rank
 
@@ -116,7 +120,7 @@ set_loser = matches['Lsets']
 rank_loser = matches['LRank']
 rank_winner = matches['WRank']
 date = '2018-10-08'
-player = 'Murray A.'
+player = 'Gasquet R.'
 
 
 
