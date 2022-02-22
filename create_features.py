@@ -10,25 +10,27 @@ def data_change(data, surface, sets):
     if surface != 'All':
         data = data[data['Surface'] == surface].reset_index(drop=True)
 
-    if sets == '3':
-        data = data[data['Best of'] == 3].reset_index(drop=True)
+        if sets == '3':
+            data = data[data['Best of'] == 3].reset_index(drop=True)
 
-    if sets == '5':
-        data = data[data['Best of'] == 5].reset_index(drop=True)
+        if sets == '5':
+            data = data[data['Best of'] == 5].reset_index(drop=True)
+
+    else:
+        if sets == '3':
+            data = data[data['Best of'] == 3].reset_index(drop=True)
+
+        if sets == '5':
+            data = data[data['Best of'] == 5].reset_index(drop=True)
 
     return data
 
 
-def win_percentage(data, player, surface, sets, opponent):
+def win_percentage_hh(data, player, surface, sets, opponent):
     new_matches = data_change(data, surface, sets)
 
-    if opponent != 'All':
-        wins = ((new_matches['Winner'] == player) & (new_matches['Loser'] == opponent)).sum()
-        losses = ((new_matches['Winner'] == opponent) & (new_matches['Loser'] == player)).sum()
-
-    else:
-        wins = (new_matches['Winner'] == player).sum()
-        losses = (new_matches['Loser'] == player).sum()
+    wins = ((new_matches['Winner'] == player) & (new_matches['Loser'] == opponent)).sum()
+    losses = ((new_matches['Winner'] == opponent) & (new_matches['Loser'] == player)).sum()
 
     player_win_percentage = wins / (wins + losses)
 
@@ -38,8 +40,18 @@ def win_percentage(data, player, surface, sets, opponent):
     return player_win_percentage
 
 
-def games_win_percentage(player, surface, sets, date_index):
-    return no
+def win_percentage(data, player, surface, sets):
+    new_matches = data_change(data, surface, sets)
+
+    wins = (new_matches['Winner'] == player).sum()
+    losses = (new_matches['Loser'] == player).sum()
+
+    player_win_percentage = wins / (wins + losses)
+
+    if wins + losses == 0:
+        player_win_percentage = np.nan
+
+    return player_win_percentage
 
 
 def diff_rank(data):
@@ -52,11 +64,12 @@ def diff_rank(data):
         list_diff_rank.append(abs(rank_winner[i] - rank_loser[i]))
 
     data['diff_rank'] = list_diff_rank
+
     return data
 
 
-def diff_generator(matches, surface, sets, opponent):
-    new_matches = data_change(matches, surface, sets)
+def diff_generator(data, surface, sets, opponent):
+    new_matches = data_change(data, surface, sets)
     winner = new_matches['Winner']
     loser = new_matches['Loser']
 
@@ -64,11 +77,87 @@ def diff_generator(matches, surface, sets, opponent):
 
     for i in range(0, new_matches.shape[0]):
         use_matches = new_matches.iloc[0:i, :]
-        player_1_win_percentage = win_percentage(use_matches, winner[i], surface, sets, opponent)
-        player_2_win_percentage = win_percentage(use_matches, loser[i], surface, sets, opponent)
+
+        if opponent != 'All':
+            player_1_win_percentage = win_percentage_hh(use_matches, winner[i], surface, sets, loser[i])
+            player_2_win_percentage = win_percentage_hh(use_matches, loser[i], surface, sets, winner[i])
+
+        else:
+            player_1_win_percentage = win_percentage(use_matches, winner[i], surface, sets)
+            player_2_win_percentage = win_percentage(use_matches, loser[i], surface, sets)
+
         list_diff.append(player_1_win_percentage - player_2_win_percentage)
 
     return new_matches, list_diff
+
+
+def feature_combiner(data, surface, sets, opponent):
+
+    surface_labels = {'Clay', 'Hard', 'Grass'}
+    set_labels = {'3', '5'}
+
+    if surface == sets == opponent == 'All':
+
+        new_matches, list_diff = diff_generator(data, 'All', 'All', 'All')
+        new_matches['diff_match_win_percentage'] = list_diff
+
+        return new_matches
+
+    if (opponent != 'All') & (sets == surface == 'All'):
+        new_matches_opponent, list_diff_opponent = diff_generator(data, 'All', 'All', 'Yes')
+        new_matches_opponent['diff_match_win_percentage_hh'] = list_diff_opponent
+
+        return new_matches_opponent
+
+    if (surface != 'All') & (sets == opponent == 'All'):
+
+        for i in surface_labels:
+
+            globals()['new_matches_%s' % i], globals()['list_diff_%s' % i] = diff_generator(data, i, 'All', 'All')
+            globals()['new_matches_%s' % i]['diff_match_win_percentage_surface'] = globals()['list_diff_%s' % i]
+
+        new_matches_surfaces_combined = pd.concat([new_matches_Grass, new_matches_Clay, new_matches_Hard])
+
+        return new_matches_surfaces_combined
+
+    if (sets != 'All') & (surface == opponent == 'All'):
+
+        for i in set_labels:
+
+            globals()['new_matches_%s' % i], globals()['list_diff_%s' % i] = diff_generator(data, 'All', i, 'All')
+            globals()['new_matches_%s' % i]['diff_match_win_percentage_sets'] = globals()['list_diff_%s' % i]
+
+        new_matches_sets_combined = pd.concat([new_matches_3, new_matches_5])
+
+        return new_matches_sets_combined
+
+    if (sets != 'All') & (surface != 'All') & (opponent == 'All'):
+
+        for i in set_labels:
+            for j in surface_labels:
+                globals()['new_matches_{0}_{1}'.format(i, j)], globals()['list_diff_{0}_{1}'.format(i, j)] = diff_generator(data, j, i, 'All')
+                globals()['new_matches_{0}_{1}'.format(i, j)]['diff_match_win_percentage_surface_sets'] = globals()['list_diff_{0}_{1}'.format(i, j)]
+
+        new_matches_surfaces_sets_combined = pd.concat(
+            [new_matches_3_Grass, new_matches_3_Clay, new_matches_3_Hard, new_matches_5_Grass,
+             new_matches_5_Clay, new_matches_5_Hard])
+
+        return new_matches_surfaces_sets_combined
+
+
+def create_diff(data):
+
+    new_matches_rank = diff_rank(data)
+    new_matches_win = feature_combiner(data, 'All', 'All', 'All')
+    new_matches_opponent = feature_combiner(data, 'All', 'All', 'Yes')
+    new_matches_surfaces_combined = feature_combiner(data, 'Yes', 'All', 'All')
+    new_matches_sets_combined = feature_combiner(data, 'All', 'Yes', 'All')
+    new_matches_surfaces_sets_combined = feature_combiner(data, 'Yes', 'Yes', 'All')
+
+    new_matches_sets_combined = pd.merge(new_matches_sets_combined, new_matches_surfaces_combined)
+    full_features = pd.merge(new_matches_sets_combined, new_matches_surfaces_sets_combined)
+
+    return full_features
 
 
 matches = pd.read_csv('allmatches.csv')
@@ -79,7 +168,7 @@ rem_features = ['B365W', 'B365L', 'EXW', 'EXL', 'LBW', 'LBL', 'PSW',
 for feature in rem_features:
     matches = matches.drop(feature, axis=1)
 
-
-print(create_diff(matches))
+diff_features = create_diff(matches)
+diff_features.to_csv('./diff_features.csv')
 
 print("--- %s seconds ---" % (time.time() - start_time))
