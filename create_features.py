@@ -40,11 +40,16 @@ def diff_rank(data):
     return data
 
 
-def win_percentage_hh(data, player, surface, sets, opponent):
+def win_percentage(data, player, surface, sets, opponent):
     new_matches = data_change(data, surface, sets)
 
-    wins = ((new_matches['Winner'] == player) & (new_matches['Loser'] == opponent)).sum()
-    losses = ((new_matches['Winner'] == opponent) & (new_matches['Loser'] == player)).sum()
+    if opponent != 'All':
+        wins = ((new_matches['Winner'] == player) & (new_matches['Loser'] == opponent)).sum()
+        losses = ((new_matches['Winner'] == opponent) & (new_matches['Loser'] == player)).sum()
+
+    else:
+        wins = (new_matches['Winner'] == player).sum()
+        losses = (new_matches['Loser'] == player).sum()
 
     player_win_percentage = wins / (wins + losses)
 
@@ -54,21 +59,7 @@ def win_percentage_hh(data, player, surface, sets, opponent):
     return player_win_percentage
 
 
-def win_percentage(data, player, surface, sets):
-    new_matches = data_change(data, surface, sets)
-
-    wins = (new_matches['Winner'] == player).sum()
-    losses = (new_matches['Loser'] == player).sum()
-
-    player_win_percentage = wins / (wins + losses)
-
-    if wins + losses == 0:
-        player_win_percentage = np.nan
-
-    return player_win_percentage
-
-
-def game_win_percentage(data, player, surface, sets):
+def game_win_percentage(data, player, surface, sets, opponent):
     data = data[(data['Winner'] == player) | (data['Loser'] == player)].reset_index(drop=True)
     new_matches = data_change(data, surface, sets)
 
@@ -78,36 +69,13 @@ def game_win_percentage(data, player, surface, sets):
     winner_set_number = {'W1', 'W2', 'W3', 'W4', 'W5'}
     loser_set_number = {'L1', 'L2', 'L3', 'L4', 'L5'}
 
-    winner_data = new_matches[new_matches['Winner'] == player]
-    loser_data = new_matches[new_matches['Loser'] == player]
+    if opponent != 'All':
+        winner_data = new_matches[(new_matches['Winner'] == player) & (new_matches['Loser'] == opponent)]
+        loser_data = new_matches[(new_matches['Loser'] == player) & (new_matches['Winner'] == opponent)]
 
-    for i in winner_set_number:
-        games_won += winner_data[i].sum()
-        games_lost += loser_data[i].sum()
-    for j in loser_set_number:
-        games_lost += winner_data[j].sum()
-        games_won += loser_data[j].sum()
-
-    player_game_win_percentage = games_won / (games_won + games_lost)
-
-    if games_won + games_lost == 0:
-        player_game_win_percentage = np.nan
-
-    return player_game_win_percentage
-
-
-def game_win_percentage_hh(data, player, surface, sets, opponent):
-    data = data[(data['Winner'] == player) | (data['Loser'] == player)].reset_index(drop=True)
-    new_matches = data_change(data, surface, sets)
-
-    games_won = 0
-    games_lost = 0
-
-    winner_set_number = {'W1', 'W2', 'W3', 'W4', 'W5'}
-    loser_set_number = {'L1', 'L2', 'L3', 'L4', 'L5'}
-
-    winner_data = new_matches[(new_matches['Winner'] == player) & (new_matches['Loser'] == opponent)]
-    loser_data = new_matches[(new_matches['Loser'] == player) & (new_matches['Winner'] == opponent)]
+    else:
+        winner_data = new_matches[new_matches['Winner'] == player]
+        loser_data = new_matches[new_matches['Loser'] == player]
 
     for i in winner_set_number:
         games_won += winner_data[i].sum()
@@ -135,12 +103,12 @@ def diff_generator(data, surface, sets, opponent):
         use_matches = new_matches.iloc[0:i, :]
 
         if opponent != 'All':
-            player_1_win_percentage = win_percentage_hh(use_matches, winner[i], surface, sets, loser[i])
-            player_2_win_percentage = win_percentage_hh(use_matches, loser[i], surface, sets, winner[i])
+            player_1_win_percentage = win_percentage(use_matches, winner[i], surface, sets, loser[i])
+            player_2_win_percentage = win_percentage(use_matches, loser[i], surface, sets, winner[i])
 
         else:
-            player_1_win_percentage = win_percentage(use_matches, winner[i], surface, sets)
-            player_2_win_percentage = win_percentage(use_matches, loser[i], surface, sets)
+            player_1_win_percentage = win_percentage(use_matches, winner[i], surface, sets, opponent)
+            player_2_win_percentage = win_percentage(use_matches, loser[i], surface, sets, opponent)
 
         list_diff.append(player_1_win_percentage - player_2_win_percentage)
 
@@ -217,6 +185,7 @@ def create_diff(data):
 
 
 matches = pd.read_csv('allmatches.csv')
+matches = matches.iloc[0:10000, :]
 
 rem_features = ['B365W', 'B365L', 'EXW', 'EXL', 'LBW', 'LBL', 'PSW',
                 'PSL', 'SJW', 'SJL', 'MaxW', 'MaxL', 'AvgW', 'AvgL']
@@ -224,9 +193,9 @@ rem_features = ['B365W', 'B365L', 'EXW', 'EXL', 'LBW', 'LBL', 'PSW',
 for feature in rem_features:
     matches = matches.drop(feature, axis=1)
 
-# diff_features = create_diff(matches)
+diff_features = create_diff(matches)
 # diff_features.to_csv('./diff_features.csv')
 
-print(game_win_percentage_hh(matches, 'Nadal R.', 'All', '3', 'Djokovic N.'))
+# print(game_win_percentage_hh(matches, 'Nadal R.', 'All', '3', 'Djokovic N.'))
 
 print("--- %s seconds ---" % (time.time() - start_time))
