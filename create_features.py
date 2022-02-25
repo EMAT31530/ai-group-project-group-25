@@ -232,8 +232,8 @@ rem_features = ['B365W', 'B365L', 'EXW', 'EXL', 'LBW', 'LBL', 'PSW',
 for feature in rem_features:
     matches = matches.drop(feature, axis=1)
 
-new_matches = create_diff(matches)
-# diff_features.to_csv('./diff_features.csv')
+diff_features = create_diff(matches)
+diff_features.to_csv('./diff_features_new.csv')
 
 # print(feature_combiner_game(matches, 'All', 'All', 'All'))
 
