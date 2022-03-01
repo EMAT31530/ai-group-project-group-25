@@ -1,0 +1,177 @@
+import pandas as pd
+import tensorflow
+import numpy
+from numpy import array
+from numpy import argmax
+from tensorflow.keras.utils import to_categorical
+from sklearn.preprocessing import LabelEncoder
+
+# drop first column, repeat of index
+all_matches = pd.read_excel("all_matches.xlsx")
+all_matches = all_matches.drop(axis = 1, columns=['Unnamed: 0'])
+
+# drop time from the DateTime column
+all_matches['Date'] = pd.to_datetime(all_matches['Date']).dt.date
+
+# drop incomplete games
+all_matches = all_matches.dropna(subset=['W1', 'Wsets', 'W2'])
+unfinished_games = all_matches.loc[all_matches['Wsets'].isin([1, 0])]
+all_matches = pd.concat([all_matches, unfinished_games, unfinished_games]).drop_duplicates(keep=False)
+
+from pandas.core.arrays import integer
+winner=(all_matches['Winner'])
+labelwinner = LabelEncoder()
+integerwinner = labelwinner.fit_transform(winner)
+encodedwinner=to_categorical(integerwinner)
+c=labelwinner.transform(['Gasquet R.'])
+def return_onehotencode1(player_name):
+  player_num=labelwinner.transform([player_name])
+  for i in range(len(integerwinner)):
+   if player_num == integerwinner[i]:
+     return(encodedwinner[i])
+print(labelwinner.inverse_transform([178]))
+
+loser=(all_matches['Loser'])
+labelloser = LabelEncoder()
+integerloser = labelloser.fit_transform(loser)
+encodedloser=to_categorical(integerloser)
+def return_onehotencode2(player_name):
+  player_num=labelloser.transform([player_name])
+  for i in range(len(integerloser)):
+   if player_num == integerloser[i]:
+     return(encodedloser[i])
+
+court=(all_matches['Court'])
+labelcourt=LabelEncoder()
+integercourt= labelcourt.fit_transform(court)
+encodedcourt=to_categorical(integercourt)
+def return_onehotencode3(court):
+  court_num=labelcourt.transform([court])
+  for i in range(len(integercourt)):
+   if court_num == integercourt[i]:
+     return(encodedcourt[i])
+surface=(all_matches['Surface'])
+labelsurface=LabelEncoder()
+integersurface=labelsurface.fit_transform(surface)
+encodedsurface=to_categorical(integersurface)
+def return_onehotencode4(surface):
+  surface_num=labelsurface.transform([surface])
+  for i in range(len(integersurface)):
+   if surface_num == integersurface[i]:
+     return(encodedsurface[i])
+
+import numpy as np
+WRank=(all_matches['WRank']).fillna(1890)
+LRank=(all_matches['LRank']).fillna(1890)
+
+listwinner=list(encodedwinner)
+listloser=list(encodedloser)
+listsurface=list(encodedsurface)
+listcourt=list(encodedcourt)
+
+dataX = {'Winner': listwinner ,
+        'Loser': listloser,
+        'Surface': listsurface,
+        'Court': listcourt,
+        'WRank': WRank,
+        'LRank': LRank}
+
+dfX = pd.DataFrame(dataX)
+
+print(dfX.head)
+
+B365W=(all_matches['B365W']).fillna(1)
+LBW=(all_matches['LBW']).fillna(1)
+PSW=(all_matches['PSW']).fillna(1)
+SJW=(all_matches['SJW']).fillna(1)
+Win_one=[]
+B365W1=np.array(B365W)
+LBW1=np.array(LBW)
+PSW1=np.array(PSW)
+SJW1=np.array(SJW)
+Win_one=(LBW1+B365W1+PSW1+SJW1)/4
+
+B365L=(all_matches['B365L']).fillna(1)
+LBL=(all_matches['LBL']).fillna(1)
+PSL=(all_matches['PSL']).fillna(1)
+SJL=(all_matches['SJL']).fillna(1)
+Loser_one=[]
+B365L1=np.array(B365L)
+LBL1=np.array(LBL)
+PSL1=np.array(PSL)
+SJL1=np.array(SJL)
+Loser_one=(LBL1+B365L1+PSL1+SJL1)/4
+
+
+dataY = {'Win_one': Win_one ,
+        'Loser_one': Loser_one}
+
+dfY = pd.DataFrame(dataY)
+
+from sklearn.model_selection import train_test_split
+Rank=dfX[['WRank','LRank']].values
+X_data=np.hstack((encodedwinner,encodedloser,encodedsurface,encodedcourt,Rank))
+train_X, test_X, train_y, test_y = train_test_split(X_data, Win_one, test_size=0.25, random_state=0)
+train_X1, test_X1, train_y1, test_y1 = train_test_split(X_data, Loser_one, test_size=0.25, random_state=0)
+
+import pandas as pd
+from sklearn.model_selection import cross_val_score
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.metrics import accuracy_score
+import matplotlib.pylab as plt
+
+
+regressor = DecisionTreeRegressor(max_depth=11)
+regressor.fit(train_X,train_y)
+predictions = regressor.predict(train_X)
+train_acc = regressor.score(train_X, train_y)
+predictions1 = regressor.predict(test_X)
+test_acc = regressor.score(test_X, test_y)
+print(predictions1)
+print(train_acc)
+print(test_acc)
+
+test_acc_scores=[]
+train_acc_scores=[]
+for i in range(50):
+  regressor = DecisionTreeRegressor(max_depth=i+1)
+  regressor.fit(train_X,train_y)
+  train_acc = regressor.score(train_X, train_y)
+  train_acc_scores.append(train_acc)
+  test_acc = regressor.score(test_X, test_y)
+  test_acc_scores.append(test_acc)
+  
+  import matplotlib.pyplot as plt
+import numpy as np
+
+x=range(1,51)
+
+
+plt.plot(x, train_acc_scores, label = "test accurancy")
+plt.plot(x, test_acc_scores, label = "train accurancy")
+plt.legend()
+plt.show()
+
+regressor1 = DecisionTreeRegressor(max_depth=10)
+regressor1.fit(train_X1,train_y1)
+train_acc = regressor1.score(train_X1, train_y1)
+test_acc = regressor1.score(test_X1, test_y1)
+print(test_acc)
+
+#the optimum depth is 11 for regressor and 10 for regressor1
+regressor = DecisionTreeRegressor(max_depth=11)
+regressor.fit(train_X,train_y)
+regressor1 = DecisionTreeRegressor(max_depth=10)
+regressor1.fit(train_X1,train_y1)
+
+def player_chance_of_winning(player_1,player_2,surface,court,player1_rank,player2_rank):
+    a=return_onehotencode1(player_1)
+    b=return_onehotencode2(player_2)
+    c=return_onehotencode4(surface)
+    d=return_onehotencode3(court)
+    e=np.concatenate((a,b,c,d,player1_rank,player2_rank),axis=None)
+    player1_betting_odds=regressor.predict([e])
+    player2_betting_odds=regressor1.predict([e])
+    player1_percentage=player2_betting_odds/(player1_betting_odds+player2_betting_odds)
+    player2_percentage=player1_betting_odds/(player1_betting_odds+player2_betting_odds)
+    return((player1_percentage),(player2_percentage))
