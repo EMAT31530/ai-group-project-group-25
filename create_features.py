@@ -2,11 +2,15 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 import time
+import random
 
 start_time = time.time()
 
 
 def data_change(data, surface, sets):
+
+    data = data[(data['Comment'] == 'Completed')].reset_index(drop=True)
+
     if surface != 'All':
         data = data[data['Surface'] == surface].reset_index(drop=True)
 
@@ -26,13 +30,98 @@ def data_change(data, surface, sets):
     return data
 
 
+def choose_player(data):
+
+    def variable_definition():
+
+        winner = data['Winner']
+        loser = data['Loser']
+        winner_rank = data['WRank']
+        loser_rank = data['LRank']
+        winner_set_1 = data['W1']
+        winner_set_2 = data['W2']
+        winner_set_3 = data['W3']
+        winner_set_4 = data['W4']
+        winner_set_5 = data['W5']
+        loser_set_1 = data['L1']
+        loser_set_2 = data['L2']
+        loser_set_3 = data['L3']
+        loser_set_4 = data['L4']
+        loser_set_5 = data['L5']
+
+        player_0 = []
+        player_1 = []
+        outcome = []
+        player_0_rank = []
+        player_1_rank = []
+        player_0_set_1 = []
+        player_0_set_2 = []
+        player_0_set_3 = []
+        player_0_set_4 = []
+        player_0_set_5 = []
+        player_1_set_1 = []
+        player_1_set_2 = []
+        player_1_set_3 = []
+        player_1_set_4 = []
+        player_1_set_5 = []
+
+        winner_sets = [winner_set_1, winner_set_2, winner_set_3, winner_set_4, winner_set_5]
+        loser_sets = [loser_set_1, loser_set_2, loser_set_3, loser_set_4, loser_set_5]
+        player_0_sets = [player_0_set_1, player_0_set_2, player_0_set_3, player_0_set_4, player_0_set_5]
+        player_1_sets = [player_1_set_1, player_1_set_2, player_1_set_3, player_1_set_4, player_1_set_5]
+
+        return winner, loser, winner_rank, loser_rank, player_0, player_1, player_0_rank, player_1_rank, outcome, winner_sets, loser_sets, player_0_sets, player_1_sets
+
+    winner, loser, winner_rank, loser_rank, player_0, player_1, player_0_rank, player_1_rank, outcome, winner_sets, loser_sets, player_0_sets, player_1_sets = variable_definition()
+
+    for i in range(data.shape[0]):
+
+        n = random.randint(0, 1)
+
+        if n == 0:
+            player_0.append(winner[i])
+            player_1.append(loser[i])
+            outcome.append(1)
+            player_0_rank.append(winner_rank[i])
+            player_1_rank.append(loser_rank[i])
+
+            for j in range(5):
+                player_0_sets[j] = winner_sets[j]
+                player_1_sets[j] = loser_sets[j]
+
+        else:
+            player_0.append(loser[i])
+            player_1.append(winner[i])
+            outcome.append(0)
+            player_1_rank.append(winner_rank[i])
+            player_0_rank.append(loser_rank[i])
+
+            for j in range(5):
+                player_0_sets[j] = loser_sets[j]
+                player_1_sets[j] = winner_sets[j]
+
+    data['player_0'] = player_0
+    data['player_1'] = player_1
+    data['outcome'] = outcome
+    data['player_0_rank'] = player_0_rank
+    data['player_1_rank'] = player_1_rank
+
+    for i in range(5):
+        data['player_0_set' + '_' + str(i+1)] = player_0_sets[i]
+        data['player_1_set' + '_' + str(i+1)] = player_1_sets[i]
+
+    data = data.drop(labels = ['WPts', 'LPts', 'Wsets', 'Lsets', 'Court', 'Series', 'Winner', 'Loser', 'WRank', 'LRank', 'W1', 'W2', 'W3', 'W4', 'W5', 'L1', 'L2', 'L3', 'L4', 'L5'], axis = 1)
+
+    return data
+
+
 def diff_rank(data):
-    rank_loser = data['LRank']
-    rank_winner = data['WRank']
+    rank_0 = data['player_0_rank']
+    rank_1 = data['player_1_rank']
     list_diff_rank = []
 
     for i in range(data.shape[0]):
-        list_diff_rank.append(abs(rank_winner[i] - rank_loser[i]))
+        list_diff_rank.append(rank_0[i] - rank_1[i])
 
     data['diff_rank'] = list_diff_rank
 
@@ -43,12 +132,12 @@ def win_percentage(data, player, surface, sets, opponent):
     new_matches = data_change(data, surface, sets)
 
     if opponent != 'All':
-        wins = ((new_matches['Winner'] == player) & (new_matches['Loser'] == opponent)).sum()
-        losses = ((new_matches['Winner'] == opponent) & (new_matches['Loser'] == player)).sum()
+        wins = ((new_matches['player_0'] == player) & (new_matches['player_1'] == opponent) & (new_matches['outcome'] == 1) | (new_matches['player_1'] == player) & (new_matches['player_0'] == opponent) & (new_matches['outcome'] == 0)).sum()
+        losses = ((new_matches['player_0'] == player) & (new_matches['player_1'] == opponent) & (new_matches['outcome'] == 0) | (new_matches['player_1'] == player) & (new_matches['player_0'] == opponent) & (new_matches['outcome'] == 1)).sum()
 
     else:
-        wins = (new_matches['Winner'] == player).sum()
-        losses = (new_matches['Loser'] == player).sum()
+        wins = ((new_matches['player_0'] == player) & (new_matches['outcome'] == 1) | (new_matches['player_1'] == player) & (new_matches['outcome'] == 0)).sum()
+        losses = ((new_matches['player_1'] == player) & (new_matches['outcome'] == 1) | (new_matches['player_0'] == player) & (new_matches['outcome'] == 0)).sum()
 
     player_win_percentage = wins / (wins + losses)
 
@@ -59,29 +148,29 @@ def win_percentage(data, player, surface, sets, opponent):
 
 
 def game_win_percentage(data, player, surface, sets, opponent):
-    data = data[(data['Winner'] == player) | (data['Loser'] == player)].reset_index(drop=True)
+
     new_matches = data_change(data, surface, sets)
+
+    if opponent != 'All':
+        player_pt1 = new_matches[((new_matches['player_0'] == player) & (new_matches['player_1'] == opponent))].reset_index(drop=True)
+        player_pt2 = new_matches[((new_matches['player_1'] == player) & (new_matches['player_0'] == opponent))].reset_index(drop=True)
+
+    else:
+        player_pt1 = new_matches[(new_matches['player_0'] == player)].reset_index(drop=True)
+        player_pt2 = new_matches[(new_matches['player_1'] == player)].reset_index(drop=True)
 
     games_won = 0
     games_lost = 0
 
-    winner_set_number = {'W1', 'W2', 'W3', 'W4', 'W5'}
-    loser_set_number = {'L1', 'L2', 'L3', 'L4', 'L5'}
+    player_0_sets = {'player_0_set_1', 'player_0_set_2', 'player_0_set_3', 'player_0_set_4', 'player_0_set_5'}
+    player_1_sets = {'player_1_set_1', 'player_1_set_2', 'player_1_set_3', 'player_1_set_4', 'player_1_set_5'}
 
-    if opponent != 'All':
-        winner_data = new_matches[(new_matches['Winner'] == player) & (new_matches['Loser'] == opponent)]
-        loser_data = new_matches[(new_matches['Loser'] == player) & (new_matches['Winner'] == opponent)]
-
-    else:
-        winner_data = new_matches[new_matches['Winner'] == player]
-        loser_data = new_matches[new_matches['Loser'] == player]
-
-    for i in winner_set_number:
-        games_won += winner_data[i].sum()
-        games_lost += loser_data[i].sum()
-    for j in loser_set_number:
-        games_lost += winner_data[j].sum()
-        games_won += loser_data[j].sum()
+    for i in player_0_sets:
+        games_won += player_pt1[i].sum()
+        games_lost += player_pt2[i].sum()
+    for j in player_1_sets:
+        games_lost += player_pt1[j].sum()
+        games_won += player_pt2[j].sum()
 
     player_game_win_percentage = games_won / (games_won + games_lost)
 
@@ -93,8 +182,9 @@ def game_win_percentage(data, player, surface, sets, opponent):
 
 def diff_generator(data, surface, sets, opponent, type):
     new_matches = data_change(data, surface, sets)
-    winner = new_matches['Winner']
-    loser = new_matches['Loser']
+
+    player_0 = new_matches['player_0']
+    player_1 = new_matches['player_1']
 
     list_diff = []
 
@@ -103,25 +193,25 @@ def diff_generator(data, surface, sets, opponent, type):
 
         if type == 'match':
             if opponent != 'All':
-                player_1_win_percentage = win_percentage(use_matches, winner[i], surface, sets, loser[i])
-                player_2_win_percentage = win_percentage(use_matches, loser[i], surface, sets, winner[i])
+                player_0_win_percentage = win_percentage(use_matches, player_0[i], surface, sets, player_1[i])
+                player_1_win_percentage = win_percentage(use_matches, player_1[i], surface, sets, player_0[i])
 
             else:
-                player_1_win_percentage = win_percentage(use_matches, winner[i], surface, sets, opponent)
-                player_2_win_percentage = win_percentage(use_matches, loser[i], surface, sets, opponent)
+                player_0_win_percentage = win_percentage(use_matches, player_0[i], surface, sets, opponent)
+                player_1_win_percentage = win_percentage(use_matches, player_1[i], surface, sets, opponent)
 
-            list_diff.append(player_1_win_percentage - player_2_win_percentage)
+            list_diff.append(player_0_win_percentage - player_1_win_percentage)
 
         if type == 'game':
             if opponent != 'All':
-                player_1_game_win_percentage = game_win_percentage(use_matches, winner[i], surface, sets, loser[i])
-                player_2_game_win_percentage = game_win_percentage(use_matches, loser[i], surface, sets, winner[i])
+                player_0_game_win_percentage = game_win_percentage(use_matches, player_0[i], surface, sets, player_1[i])
+                player_1_game_win_percentage = game_win_percentage(use_matches, player_1[i], surface, sets, player_0[i])
 
             else:
-                player_1_game_win_percentage = game_win_percentage(use_matches, winner[i], surface, sets, opponent)
-                player_2_game_win_percentage = game_win_percentage(use_matches, loser[i], surface, sets, opponent)
+                player_0_game_win_percentage = game_win_percentage(use_matches, player_0[i], surface, sets, opponent)
+                player_1_game_win_percentage = game_win_percentage(use_matches, player_1[i], surface, sets, opponent)
 
-            list_diff.append(player_1_game_win_percentage - player_2_game_win_percentage)
+            list_diff.append(player_0_game_win_percentage - player_1_game_win_percentage)
 
     return new_matches, list_diff
 
@@ -215,8 +305,12 @@ def create_diff(data):
     new_matches_game_sets_combined = feature_combiner_match(data, 'All', 'Yes', 'All', 'game')
     new_matches_game_surfaces_sets_combined = feature_combiner_match(data, 'Yes', 'Yes', 'All', 'game')
 
+    new_matches_sets_combined = pd.merge(new_matches_opponent, new_matches_sets_combined)
+    new_matches_sets_combined = pd.merge(new_matches_win, new_matches_sets_combined)
     new_matches_sets_combined = pd.merge(new_matches_sets_combined, new_matches_surfaces_combined)
     new_matches_sets_combined = pd.merge(new_matches_sets_combined, new_matches_surfaces_sets_combined)
+    new_matches_game_sets_combined = pd.merge(new_matches_game_opponent, new_matches_game_sets_combined)
+    new_matches_game_sets_combined = pd.merge(new_matches_game_win, new_matches_game_sets_combined)
     new_matches_game_sets_combined = pd.merge(new_matches_game_sets_combined, new_matches_game_surfaces_combined)
     new_matches_game_sets_combined = pd.merge(new_matches_game_sets_combined, new_matches_game_surfaces_sets_combined)
     full_features = pd.merge(new_matches_sets_combined, new_matches_game_sets_combined)
@@ -225,6 +319,8 @@ def create_diff(data):
 
 
 matches = pd.read_csv('allmatches.csv')
+matches = matches.iloc[0:100, :]
+matches = choose_player(matches)
 
 rem_features = ['B365W', 'B365L', 'EXW', 'EXL', 'LBW', 'LBL', 'PSW',
                 'PSL', 'SJW', 'SJL', 'MaxW', 'MaxL', 'AvgW', 'AvgL']
@@ -233,8 +329,10 @@ for feature in rem_features:
     matches = matches.drop(feature, axis=1)
 
 diff_features = create_diff(matches)
-diff_features.to_csv('./diff_features_new.csv')
+# diff_features.to_csv('./diff_features_new.csv')
+
 
 # print(feature_combiner_game(matches, 'All', 'All', 'All'))
+
 
 print("--- %s seconds ---" % (time.time() - start_time))
