@@ -319,7 +319,6 @@ def create_diff(data):
 
 
 matches = pd.read_csv('allmatches.csv')
-matches = matches.iloc[0:100, :]
 matches = choose_player(matches)
 
 rem_features = ['B365W', 'B365L', 'EXW', 'EXL', 'LBW', 'LBL', 'PSW',
@@ -329,7 +328,7 @@ for feature in rem_features:
     matches = matches.drop(feature, axis=1)
 
 diff_features = create_diff(matches)
-# diff_features.to_csv('./diff_features_new.csv')
+diff_features.to_csv('./diff_features.csv')
 
 
 # print(feature_combiner_game(matches, 'All', 'All', 'All'))
