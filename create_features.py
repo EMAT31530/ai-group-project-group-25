@@ -7,6 +7,7 @@ import random
 start_time = time.time()
 
 
+# limit data depending on number of sets or type of surface required
 def data_change(data, surface, sets):
 
     data = data[(data['Comment'] == 'Completed')].reset_index(drop=True)
@@ -30,6 +31,7 @@ def data_change(data, surface, sets):
     return data
 
 
+# randomly associate winners and losers as players 0 and 1, rewrite features in terms of players 0 and 1
 def choose_player(data):
 
     def variable_definition():
@@ -86,10 +88,12 @@ def choose_player(data):
             player_1_rank.append(loser_rank[i])
 
             for j in range(5):
-                player_0_sets[j] = winner_sets[j]
-                player_1_sets[j] = loser_sets[j]
+                set_number_win = winner_sets[j]
+                set_number_lose = loser_sets[j]
+                player_0_sets[j].append(set_number_win[i])
+                player_1_sets[j].append(set_number_lose[i])
 
-        else:
+        if n == 1:
             player_0.append(loser[i])
             player_1.append(winner[i])
             outcome.append(0)
@@ -97,8 +101,10 @@ def choose_player(data):
             player_0_rank.append(loser_rank[i])
 
             for j in range(5):
-                player_0_sets[j] = loser_sets[j]
-                player_1_sets[j] = winner_sets[j]
+                set_number_win = winner_sets[j]
+                set_number_lose = loser_sets[j]
+                player_0_sets[j].append(set_number_lose[i])
+                player_1_sets[j].append(set_number_win[i])
 
     data['player_0'] = player_0
     data['player_1'] = player_1
@@ -115,6 +121,7 @@ def choose_player(data):
     return data
 
 
+# create differences in ranks for all matches
 def diff_rank(data):
     rank_0 = data['player_0_rank']
     rank_1 = data['player_1_rank']
@@ -128,6 +135,7 @@ def diff_rank(data):
     return data
 
 
+# calculate individual match win percentage in terms of surface, sets and opponents
 def win_percentage(data, player, surface, sets, opponent):
     new_matches = data_change(data, surface, sets)
 
@@ -147,6 +155,7 @@ def win_percentage(data, player, surface, sets, opponent):
     return player_win_percentage
 
 
+# calculate individual game win percentage in terms of surface, sets and opponents
 def game_win_percentage(data, player, surface, sets, opponent):
 
     new_matches = data_change(data, surface, sets)
@@ -180,6 +189,7 @@ def game_win_percentage(data, player, surface, sets, opponent):
     return player_game_win_percentage
 
 
+# create list of differences in match/game win percentages for all relevant matches
 def diff_generator(data, surface, sets, opponent, type):
     new_matches = data_change(data, surface, sets)
 
@@ -216,6 +226,7 @@ def diff_generator(data, surface, sets, opponent, type):
     return new_matches, list_diff
 
 
+# add lists as new column in data
 def feature_combiner_match(data, surface, sets, opponent, type):
     surface_labels = {'Clay', 'Hard', 'Grass'}
     set_labels = {'3', '5'}
@@ -291,6 +302,7 @@ def feature_combiner_match(data, surface, sets, opponent, type):
         return new_matches_surfaces_sets_combined
 
 
+# combine all dataframes together
 def create_diff(data):
     new_matches_rank = diff_rank(data)
     new_matches_win = feature_combiner_match(data, 'All', 'All', 'All', 'match')
