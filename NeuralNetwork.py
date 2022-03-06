@@ -44,14 +44,24 @@ model.add(tensorflow.keras.layers.Dense(32,input_dim=num_features,activation = '
 model.add(tensorflow.keras.layers.Dense(16,activation='relu'))
 model.add(tensorflow.keras.layers.Dense(8,activation='relu'))
 model.add(tensorflow.keras.layers.Dense(4,activation='relu'))
-model.add(tensorflow.keras.layers.Dense(591,activation='softmax'))
+model.add(tensorflow.keras.layers.Dense(num_classes,activation='softmax'))
 
 #calculate cross-entropy loss
 model.compile(loss='categorical_crossentropy', optimizer=tensorflow.keras.optimizers.SGD(learning_rate=0.01), metrics=['accuracy'])
 
 model.summary()
 
-history = model.fit(y_train,x_train_categorical, epochs=500)
+checkpoint_path="weights.{epoch:02d}-{val_loss:.2f}.h5"
+modelcheckpoint = tensorflow.keras.callbacks.ModelCheckpoint(checkpoint_path,monitor='val_accuracy', save_best_only=True, mode = 'max')
+
+callbacks_list = [modelcheckpoint]
+
+# Train the model with the new callback
+history=model.fit(y_train, x_train_categorical, batch_size=128, validation_data=(y_test,x_test_categorical),epochs=100,callbacks=[modelcheckpoint], validation_split=0.1)
+
+# evaluate the model
+scores = model.evaluate(y_train, x_train_categorical, verbose=0)
+print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
 
 #review results
 train_acc = model.evaluate(y_train, x_train_categorical, verbose=0)
@@ -59,19 +69,15 @@ test_acc = model.evaluate(y_test, x_test_categorical, verbose=0)
 print(train_acc)
 print(test_acc)
 
-#model = tensorflow.keras.models.Sequential()
-#model.add(tensorflow.keras.layers.Dense(32,input_dim=num_features,activation = 'relu'))
-#model.add(tensorflow.keras.layers.Dense(16,activation='relu'))
-#model.add(tensorflow.keras.layers.Dense(8,activation='relu'))
-#model.add(tensorflow.keras.layers.Dense(4,activation='relu'))
-#model.add(tensorflow.keras.layers.Dense(591,activation='softmax'))
+# save model and architecture to single file
+model.save("model.h5")
 
-#model.compile(loss='categorical_crossentropy', optimizer=SGD(learning_rate=0.01), metrics=['accuracy'])
+best_model = load_model("model.h5")
 
-#checkpoint_path="weights.best.hdf5"
-#checkpoint = tensorflow.keras.callbacks.ModelCheckpoint(checkpoint_path,monitor='val accuracy', verbose=0, save_best_only=True, mode = 'max')
+#for predictions
+#put matches throught create_features call it ausopen22.csv (for example)
+ausopen22 = pd.read_csv('ausopen.csv')
+new_matches = ausopen22[features_list]
 
-#callbacks_list = [checkpoint]
-
-# Train the model with the new callback
-#model.fit(y_train, x_train_categorical,epochs=100, callbacks=[callbacks_list],verbose=0)
+#add new column for predictions
+new_matches['predictions'] = best_model.predict_classes(new_matches)
