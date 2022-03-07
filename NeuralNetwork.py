@@ -42,6 +42,7 @@ y_test = scaler.transform(y_test)
 #Initialise neural network
 model = tensorflow.keras.models.Sequential()
 model.add(tensorflow.keras.layers.Dense(32,input_dim = num_features, activation = 'relu'))
+model.add(tensorflow.keras.layers.Dropout(0.5))
 model.add(tensorflow.keras.layers.Dense(16,activation='relu'))
 model.add(tensorflow.keras.layers.Dense(8,activation='relu'))
 model.add(tensorflow.keras.layers.Dense(4,activation='relu'))
