@@ -149,7 +149,7 @@ def win_percentage(data, player, surface, sets, opponent):
     player_win_percentage = wins / (wins + losses)
 
     if wins + losses == 0:
-        player_win_percentage = np.nan
+        player_win_percentage = 0
 
     return player_win_percentage
 
@@ -183,7 +183,7 @@ def game_win_percentage(data, player, surface, sets, opponent):
     player_game_win_percentage = games_won / (games_won + games_lost)
 
     if games_won + games_lost == 0:
-        player_game_win_percentage = np.nan
+        player_game_win_percentage = 0
 
     return player_game_win_percentage
 
