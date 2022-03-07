@@ -4,7 +4,7 @@ import sklearn
 import numpy as np
 import tensorflow
 import pandas as pd
-from tensorflow.keras.optimizers import SGD
+from tensorflow.keras.optimizers import SGD, Adam
 from tensorflow.keras.utils import to_categorical
 from sklearn.preprocessing import LabelEncoder
 from keras.models import load_model
@@ -42,22 +42,21 @@ y_test = scaler.transform(y_test)
 #Initialise neural network
 model = tensorflow.keras.models.Sequential()
 model.add(tensorflow.keras.layers.Dense(32,input_dim = num_features, activation = 'relu'))
-model.add(tensorflow.keras.layers.Dropout(0.5))
 model.add(tensorflow.keras.layers.Dense(16,activation='relu'))
 model.add(tensorflow.keras.layers.Dense(8,activation='relu'))
 model.add(tensorflow.keras.layers.Dense(4,activation='relu'))
-model.add(tensorflow.keras.layers.Dense(2,activation='softmax'))
+model.add(tensorflow.keras.layers.Dense(2,activation='sigmoid'))
 
 #calculate cross-entropy loss
-model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+model.compile(loss='categorical_crossentropy', optimizer=SGD(learning_rate=0.01), metrics=['accuracy'])
 
 model.summary()
 
 #checkpoint_path="weights.{epoch:02d}-{val_loss:.2f}.h5"
-modelcheckpoint = tensorflow.keras.callbacks.ModelCheckpoint('best_model.h5', monitor='val_accuracy', save_best_only=True, mode = 'max')
+modelcheckpoint = tensorflow.keras.callbacks.ModelCheckpoint('best_model.h5', monitor='val_accuracy', save_best_only=True, mode = 'min', verbose = 2)
 
 # Train the model with the new callback
-history=model.fit(y_train, x_train_categorical, batch_size=128, validation_data=(y_test,x_test_categorical),epochs=1000,callbacks=[modelcheckpoint], validation_split=0.1)
+history=model.fit(y_train, x_train_categorical, batch_size=128, validation_data=(y_test,x_test_categorical),epochs=900,callbacks=[modelcheckpoint], validation_split=0.1)
 
 # evaluate the model
 scores = model.evaluate(y_train, x_train_categorical, verbose=0)
@@ -78,7 +77,6 @@ best_model = load_model('best_model.h5')
 #put matches throught create_features call it ausopen22.csv (for example)
 new_matches = pd.read_csv('aus_diff_features.csv')
 ausopen22 = new_matches.iloc[28960:29024,:]
-print(ausopen22)
 aus_matches = ausopen22[features_list]
 
 #add new column for predictions
@@ -92,9 +90,12 @@ ausopen22 = ausopen22.assign(predictions = actual_pred)
 
 #add new column for probabilities
 probabilities = best_model.predict(aus_matches)
+print(probabilities)
 df = pd.DataFrame(probabilities, columns=["outcome 0 probability","outcome 1 probability"])
 
 aus22_output = ausopen22[['player_0','player_1','predictions']]
+indices = np.arange(0,len(aus22_output))
+aus22_output = aus22_output.set_index(indices)
 
 finaldf = pd.concat([aus22_output,df],axis = 1)
 print(finaldf)
