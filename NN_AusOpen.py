@@ -82,7 +82,7 @@ def choose_player(data):
         if n == 0:
             player_0.append(winner[i])
             player_1.append(loser[i])
-            outcome.append(1)
+            outcome.append(0)
             player_0_rank.append(winner_rank[i])
             player_1_rank.append(loser_rank[i])
 
@@ -95,7 +95,7 @@ def choose_player(data):
         if n == 1:
             player_0.append(loser[i])
             player_1.append(winner[i])
-            outcome.append(0)
+            outcome.append(1)
             player_1_rank.append(winner_rank[i])
             player_0_rank.append(loser_rank[i])
 
@@ -293,6 +293,6 @@ combined_matches = pd.concat([diff_features, aus_matches]).reset_index(drop=True
 aus_diff_features = feature_combiner_match(combined_matches)
 new_combined_matches = pd.concat([diff_features, aus_diff_features]).reset_index(drop=True)
 
-# new_combined_matches.to_csv('./aus_diff_features.csv')
+new_combined_matches.to_csv('./aus_diff_features.csv')
 
 print("--- %s seconds ---" % (time.time() - start_time))
