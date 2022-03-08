@@ -26,28 +26,27 @@ x = to_categorical(x)
 
 features_list = ['diff_rank','diff_match_win_percentage','diff_match_win_percentage_hh','diff_match_win_percentage_sets','diff_match_win_percentage_surface','diff_match_win_percentage_surface_sets','diff_game_win_percentage','diff_game_win_percentage_hh','diff_game_win_percentage_sets','diff_game_win_percentage_surface','diff_game_win_percentage_surface_sets']
 y = matches[features_list]
-#d = sklearn.preprocessing.normalize(y,axis=1)
-#new_y = pd.DataFrame(d,columns=features_list)
+d = sklearn.preprocessing.normalize(y,axis=1)
+new_y = pd.DataFrame(d,columns=features_list)
 
 num_classes = len(np.unique(x))
 print(np.unique(x))
 num_features = len(features_list)
 
 #Split into training and test data first
-y_train, y_test, x_train_categorical, x_test_categorical = train_test_split(y, x, test_size = 0.2) #can add random_state = int to shuffle the data
+y_train, y_test, x_train_categorical, x_test_categorical = train_test_split(y, x, test_size = 0.2, random_state = 2) #can add random_state = int to shuffle the data
 
-scaler = sklearn.preprocessing.StandardScaler()
-y_train = scaler.fit_transform(y_train)
-y_test = scaler.transform(y_test)
+#scaler = sklearn.preprocessing.StandardScaler()
+#y_train = scaler.fit_transform(y_train)
+#y_test = scaler.transform(y_test)
 
 #Use 'relu' or 'sigmoid' for activation
 #Use 'softmax' or 'sigmoid' for output layer
 #Initialise neural network
 model = tensorflow.keras.models.Sequential()
-model.add(tensorflow.keras.layers.Dense(32,input_dim = num_features, activation = 'relu'))
+model.add(tensorflow.keras.layers.Dense(64,input_dim = num_features, activation = 'relu'))
+model.add(tensorflow.keras.layers.Dense(32,activation='relu'))
 model.add(tensorflow.keras.layers.Dense(16,activation='relu'))
-model.add(tensorflow.keras.layers.Dense(8,activation='relu'))
-model.add(tensorflow.keras.layers.Dense(4,activation='relu'))
 model.add(tensorflow.keras.layers.Dense(num_classes,activation='softmax'))
 
 #calculate cross-entropy loss
@@ -59,7 +58,7 @@ model.summary()
 modelcheckpoint = tensorflow.keras.callbacks.ModelCheckpoint('best_model.h5', monitor='val_loss', save_best_only=True, mode = 'min', verbose = 2)
 
 # Train the model with the new callback
-history=model.fit(y_train, x_train_categorical, batch_size=128, validation_data=(y_test,x_test_categorical),epochs=900,callbacks=[modelcheckpoint], validation_split=0.1)
+history=model.fit(y_train, x_train_categorical, batch_size=128, validation_data=(y_test,x_test_categorical),epochs=2000,callbacks=[modelcheckpoint], validation_split=0.1)
 
 # evaluate the model
 scores = model.evaluate(y_train, x_train_categorical, verbose=0)
