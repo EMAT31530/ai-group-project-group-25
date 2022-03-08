@@ -26,8 +26,11 @@ x = to_categorical(x)
 
 features_list = ['diff_rank','diff_match_win_percentage','diff_match_win_percentage_hh','diff_match_win_percentage_sets','diff_match_win_percentage_surface','diff_match_win_percentage_surface_sets','diff_game_win_percentage','diff_game_win_percentage_hh','diff_game_win_percentage_sets','diff_game_win_percentage_surface','diff_game_win_percentage_surface_sets']
 y = matches[features_list]
+#d = sklearn.preprocessing.normalize(y,axis=1)
+#new_y = pd.DataFrame(d,columns=features_list)
 
 num_classes = len(np.unique(x))
+print(np.unique(x))
 num_features = len(features_list)
 
 #Split into training and test data first
@@ -45,15 +48,15 @@ model.add(tensorflow.keras.layers.Dense(32,input_dim = num_features, activation 
 model.add(tensorflow.keras.layers.Dense(16,activation='relu'))
 model.add(tensorflow.keras.layers.Dense(8,activation='relu'))
 model.add(tensorflow.keras.layers.Dense(4,activation='relu'))
-model.add(tensorflow.keras.layers.Dense(2,activation='sigmoid'))
+model.add(tensorflow.keras.layers.Dense(num_classes,activation='softmax'))
 
 #calculate cross-entropy loss
-model.compile(loss='categorical_crossentropy', optimizer=SGD(learning_rate=0.01), metrics=['accuracy'])
+model.compile(loss='categorical_crossentropy', optimizer=Adam(learning_rate=0.0000001), metrics=['accuracy'])
 
 model.summary()
 
 #checkpoint_path="weights.{epoch:02d}-{val_loss:.2f}.h5"
-modelcheckpoint = tensorflow.keras.callbacks.ModelCheckpoint('best_model.h5', monitor='val_accuracy', save_best_only=True, mode = 'min', verbose = 2)
+modelcheckpoint = tensorflow.keras.callbacks.ModelCheckpoint('best_model.h5', monitor='val_loss', save_best_only=True, mode = 'min', verbose = 2)
 
 # Train the model with the new callback
 history=model.fit(y_train, x_train_categorical, batch_size=128, validation_data=(y_test,x_test_categorical),epochs=900,callbacks=[modelcheckpoint], validation_split=0.1)
@@ -86,6 +89,7 @@ for pred in predictions:
     preds = np.argmax(pred)
     actual_pred.append(preds)
 
+print(actual_pred)
 ausopen22 = ausopen22.assign(predictions = actual_pred)
 
 #add new column for probabilities
