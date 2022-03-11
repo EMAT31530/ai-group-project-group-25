@@ -103,8 +103,14 @@ def neural_network(data):
         preds = np.argmax(pred)
         actual_pred.append(preds)
 
-    print(actual_pred)
-    ausopen22 = ausopen22.assign(predictions=actual_pred)
+    new_pred = []
+    for i in actual_pred:
+        if i == 0:
+            new_pred.append(1)
+        else:
+            new_pred.append(0)
+    print(new_pred)
+    ausopen22 = ausopen22.assign(predictions=new_pred)
 
     # add new column for probabilities
     probabilities = best_model.predict(aus_matches)
