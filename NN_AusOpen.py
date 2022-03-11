@@ -189,7 +189,7 @@ def game_win_percentage(data, player, surface, sets, opponent):
 
 
 # create list of differences in match/game win percentages for all relevant matches
-def diff_generator(data, surface, sets, opponent, type, command):
+def diff_generator(data, surface, sets, opponent, type, command, timeframe):
     new_matches = data_change(data, surface, sets)
 
     player_0 = new_matches['player_0']
@@ -207,7 +207,17 @@ def diff_generator(data, surface, sets, opponent, type, command):
         index = 2881
 
     for i in range(index, new_matches.shape[0]):
-        use_matches = new_matches.iloc[0:i, :]
+
+        if timeframe == 'full':
+            timestep = 0
+
+        if timeframe == 'year':
+            if i < 365:
+                timestep = 0
+            else:
+                timestep = i - 365
+
+        use_matches = new_matches.iloc[timestep:i, :]
 
         if type == 'match':
             if opponent != 'All':
@@ -239,30 +249,38 @@ def feature_combiner_match(data):
 
     new_aus_matches = diff_rank(aus_matches)
 
-    list_diff_game = diff_generator(data, 'All', 'All', 'All', 'game', 'full')
-    list_diff_match = diff_generator(data, 'All', 'All', 'All', 'match', 'full')
+    list_diff_game = diff_generator(data, 'All', 'All', 'All', 'game', 'full', 'full')
+    list_diff_game_year = diff_generator(data, 'All', 'All', 'All', 'game', 'full', 'year')
+    list_diff_match = diff_generator(data, 'All', 'All', 'All', 'match', 'full', 'full')
+    list_diff_match_year = diff_generator(data, 'All', 'All', 'All', 'match', 'full', 'year')
 
-    list_diff_opponent_game = diff_generator(data, 'All', 'All', 'Yes', 'game', 'full')
-    list_diff_opponent_match = diff_generator(data, 'All', 'All', 'Yes', 'match', 'full')
+    list_diff_opponent_game = diff_generator(data, 'All', 'All', 'Yes', 'game', 'full', 'full')
+    list_diff_opponent_match = diff_generator(data, 'All', 'All', 'Yes', 'match', 'full', 'full')
 
-    list_diff_surface_game = diff_generator(data, 'Hard', 'All', 'All', 'match', 'surface')
-    list_diff_surface_match = diff_generator(data, 'Hard', 'All', 'All', 'game', 'surface')
+    list_diff_surface_game = diff_generator(data, 'Hard', 'All', 'All', 'match', 'surface', 'full')
+    list_diff_surface_game_year = diff_generator(data, 'Hard', 'All', 'All', 'match', 'surface', 'year')
+    list_diff_surface_match = diff_generator(data, 'Hard', 'All', 'All', 'game', 'surface', 'full')
+    list_diff_surface_match_year = diff_generator(data, 'Hard', 'All', 'All', 'game', 'surface', 'year')
 
-    list_diff_set_game = diff_generator(data, 'All', '5', 'All', 'game', 'set')
-    list_diff_set_match = diff_generator(data, 'All', '5', 'All', 'match', 'set')
+    list_diff_set_game = diff_generator(data, 'All', '5', 'All', 'game', 'set', 'full')
+    list_diff_set_match = diff_generator(data, 'All', '5', 'All', 'match', 'set', 'full')
 
-    list_diff_surface_set_game = diff_generator(data, 'Hard', '5', 'All', 'game', 'both')
-    list_diff_surface_set_match = diff_generator(data, 'Hard', '5', 'All', 'match', 'both')
+    list_diff_surface_set_game = diff_generator(data, 'Hard', '5', 'All', 'game', 'both', 'full')
+    list_diff_surface_set_match = diff_generator(data, 'Hard', '5', 'All', 'match', 'both', 'full')
 
     new_aus_matches['diff_match_win_percentage'] = list_diff_match
+    new_aus_matches['diff_match_win_percentage_year'] = list_diff_match_year
     new_aus_matches['diff_match_win_percentage_hh'] = list_diff_opponent_match
     new_aus_matches['diff_match_win_percentage_sets'] = list_diff_set_match
     new_aus_matches['diff_match_win_percentage_surface'] = list_diff_surface_match
+    new_aus_matches['diff_match_win_percentage_year_surface'] = list_diff_surface_match_year
     new_aus_matches['diff_match_win_percentage_surface_sets'] = list_diff_surface_set_match
     new_aus_matches['diff_game_win_percentage'] = list_diff_game
+    new_aus_matches['diff_game_win_percentage_year'] = list_diff_game_year
     new_aus_matches['diff_game_win_percentage_hh'] = list_diff_opponent_game
     new_aus_matches['diff_game_win_percentage_sets'] = list_diff_set_game
     new_aus_matches['diff_game_win_percentage_surface'] = list_diff_surface_game
+    new_aus_matches['diff_game_win_percentage_year_surface'] = list_diff_surface_game_year
     new_aus_matches['diff_game_win_percentage_surface_sets'] = list_diff_surface_set_game
 
     return new_aus_matches
