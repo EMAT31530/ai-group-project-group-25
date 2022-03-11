@@ -83,7 +83,7 @@ def choose_player(data):
         if n == 0:
             player_0.append(winner[i])
             player_1.append(loser[i])
-            outcome.append(1)
+            outcome.append(0)
             player_0_rank.append(winner_rank[i])
             player_1_rank.append(loser_rank[i])
 
@@ -96,7 +96,7 @@ def choose_player(data):
         if n == 1:
             player_0.append(loser[i])
             player_1.append(winner[i])
-            outcome.append(0)
+            outcome.append(1)
             player_1_rank.append(winner_rank[i])
             player_0_rank.append(loser_rank[i])
 
@@ -150,7 +150,7 @@ def win_percentage(data, player, surface, sets, opponent):
     player_win_percentage = wins / (wins + losses)
 
     if wins + losses == 0:
-        player_win_percentage = np.nan
+        player_win_percentage = 0
 
     return player_win_percentage
 
@@ -184,13 +184,13 @@ def game_win_percentage(data, player, surface, sets, opponent):
     player_game_win_percentage = games_won / (games_won + games_lost)
 
     if games_won + games_lost == 0:
-        player_game_win_percentage = np.nan
+        player_game_win_percentage = 0
 
     return player_game_win_percentage
 
 
 # create list of differences in match/game win percentages for all relevant matches
-def diff_generator(data, surface, sets, opponent, type):
+def diff_generator(data, surface, sets, opponent, type, timeframe):
     new_matches = data_change(data, surface, sets)
 
     player_0 = new_matches['player_0']
@@ -199,7 +199,17 @@ def diff_generator(data, surface, sets, opponent, type):
     list_diff = []
 
     for i in range(0, new_matches.shape[0]):
-        use_matches = new_matches.iloc[0:i, :]
+
+        if timeframe == 'full':
+            timestep = 0
+
+        if timeframe == 'year':
+            if i < 365:
+                timestep = 0
+            else:
+                timestep = i - 365
+
+        use_matches = new_matches.iloc[timestep:i, :]
 
         if type == 'match':
             if opponent != 'All':
@@ -227,22 +237,29 @@ def diff_generator(data, surface, sets, opponent, type):
 
 
 # add lists as new column in data
-def feature_combiner_match(data, surface, sets, opponent, type):
+def feature_combiner_match(data, surface, sets, opponent, type, timeframe):
     surface_labels = {'Clay', 'Hard', 'Grass'}
     set_labels = {'3', '5'}
 
     if surface == sets == opponent == 'All':
 
-        new_matches, list_diff = diff_generator(data, 'All', 'All', 'All', type)
+        new_matches, list_diff = diff_generator(data, 'All', 'All', 'All', type, timeframe)
         if type == 'game':
-            new_matches['diff_game_win_percentage'] = list_diff
+            if timeframe == 'year':
+                new_matches['diff_game_win_percentage_year'] = list_diff
+            else:
+                new_matches['diff_game_win_percentage'] = list_diff
         if type == 'match':
-            new_matches['diff_match_win_percentage'] = list_diff
+            if timeframe == 'year':
+                new_matches['diff_match_win_percentage_year'] = list_diff
+            else:
+                new_matches['diff_match_win_percentage'] = list_diff
+
 
         return new_matches
 
     if (opponent != 'All') & (sets == surface == 'All'):
-        new_matches_opponent, list_diff_opponent = diff_generator(data, 'All', 'All', 'Yes', type)
+        new_matches_opponent, list_diff_opponent = diff_generator(data, 'All', 'All', 'Yes', type, timeframe)
         if type == 'game':
             new_matches_opponent['diff_game_win_percentage_hh'] = list_diff_opponent
         if type == 'match':
@@ -253,22 +270,31 @@ def feature_combiner_match(data, surface, sets, opponent, type):
     if (surface != 'All') & (sets == opponent == 'All'):
 
         for i in surface_labels:
-            globals()['new_matches_%s' % i], globals()['list_diff_%s' % i] = diff_generator(data, i, 'All', 'All', type)
+            globals()['new_matches_{0}_{1}'.format(i, timeframe)], globals()['list_diff_{0}_{1}'.format(i, timeframe)] = diff_generator(data, i, 'All', 'All', type, timeframe)
 
             if type == 'match':
-                globals()['new_matches_%s' % i]['diff_match_win_percentage_surface'] = globals()['list_diff_%s' % i]
+                if timeframe == 'year':
+                    globals()['new_matches_{0}_{1}'.format(i, timeframe)]['diff_match_win_percentage_year_surface'] = globals()['list_diff_{0}_{1}'.format(i, timeframe)]
+                else:
+                    globals()['new_matches_{0}_{1}'.format(i, timeframe)]['diff_match_win_percentage_surface'] = globals()['list_diff_{0}_{1}'.format(i, timeframe)]
 
             if type == 'game':
-                globals()['new_matches_%s' % i]['diff_game_win_percentage_surface'] = globals()['list_diff_%s' % i]
+                if timeframe == 'year':
+                    globals()['new_matches_{0}_{1}'.format(i, timeframe)]['diff_game_win_percentage_year_surface'] = globals()['list_diff_{0}_{1}'.format(i, timeframe)]
+                else:
+                    globals()['new_matches_{0}_{1}'.format(i, timeframe)]['diff_game_win_percentage_surface'] = globals()['list_diff_{0}_{1}'.format(i, timeframe)]
 
-        new_matches_surfaces_combined = pd.concat([new_matches_Grass, new_matches_Clay, new_matches_Hard])
+        if timeframe == 'year':
+            new_matches_surfaces_combined = pd.concat([new_matches_Grass_year, new_matches_Clay_year, new_matches_Hard_year])
+        else:
+            new_matches_surfaces_combined = pd.concat([new_matches_Grass_full, new_matches_Clay_full, new_matches_Hard_full])
 
         return new_matches_surfaces_combined
 
     if (sets != 'All') & (surface == opponent == 'All'):
 
         for i in set_labels:
-            globals()['new_matches_%s' % i], globals()['list_diff_%s' % i] = diff_generator(data, 'All', i, 'All', type)
+            globals()['new_matches_%s' % i], globals()['list_diff_%s' % i] = diff_generator(data, 'All', i, 'All', type, timeframe)
 
             if type == 'match':
                 globals()['new_matches_%s' % i]['diff_match_win_percentage_sets'] = globals()['list_diff_%s' % i]
@@ -285,7 +311,7 @@ def feature_combiner_match(data, surface, sets, opponent, type):
         for i in set_labels:
             for j in surface_labels:
                 globals()['new_matches_{0}_{1}'.format(i, j)], globals()[
-                    'list_diff_{0}_{1}'.format(i, j)] = diff_generator(data, j, i, 'All', type)
+                    'list_diff_{0}_{1}'.format(i, j)] = diff_generator(data, j, i, 'All', type, timeframe)
 
                 if type == 'match':
                     globals()['new_matches_{0}_{1}'.format(i, j)]['diff_match_win_percentage_surface_sets'] = globals()[
@@ -305,29 +331,39 @@ def feature_combiner_match(data, surface, sets, opponent, type):
 # combine all dataframes together
 def create_diff(data):
     new_matches_rank = diff_rank(data)
-    new_matches_win = feature_combiner_match(data, 'All', 'All', 'All', 'match')
-    new_matches_opponent = feature_combiner_match(data, 'All', 'All', 'Yes', 'match')
-    new_matches_surfaces_combined = feature_combiner_match(data, 'Yes', 'All', 'All', 'match')
-    new_matches_sets_combined = feature_combiner_match(data, 'All', 'Yes', 'All', 'match')
-    new_matches_surfaces_sets_combined = feature_combiner_match(data, 'Yes', 'Yes', 'All', 'match')
+    new_matches_win = feature_combiner_match(data, 'All', 'All', 'All', 'match', 'full')
+    new_matches_win_year = feature_combiner_match(data, 'All', 'All', 'All', 'match', 'year')
+    new_matches_opponent = feature_combiner_match(data, 'All', 'All', 'Yes', 'match', 'full')
+    new_matches_surfaces_combined = feature_combiner_match(data, 'Yes', 'All', 'All', 'match', 'full')
+    new_matches_year_surfaces_combined = feature_combiner_match(data, 'Yes', 'All', 'All', 'match', 'year')
+    new_matches_sets_combined = feature_combiner_match(data, 'All', 'Yes', 'All', 'match', 'full')
+    new_matches_surfaces_sets_combined = feature_combiner_match(data, 'Yes', 'Yes', 'All', 'match', 'full')
 
-    new_matches_game_win = feature_combiner_match(data, 'All', 'All', 'All', 'game')
-    new_matches_game_opponent = feature_combiner_match(data, 'All', 'All', 'Yes', 'game')
-    new_matches_game_surfaces_combined = feature_combiner_match(data, 'Yes', 'All', 'All', 'game')
-    new_matches_game_sets_combined = feature_combiner_match(data, 'All', 'Yes', 'All', 'game')
-    new_matches_game_surfaces_sets_combined = feature_combiner_match(data, 'Yes', 'Yes', 'All', 'game')
+    new_matches_game_win = feature_combiner_match(data, 'All', 'All', 'All', 'game', 'full')
+    new_matches_game_win_year = feature_combiner_match(data, 'All', 'All', 'All', 'game', 'year')
+    new_matches_game_opponent = feature_combiner_match(data, 'All', 'All', 'Yes', 'game', 'full')
+    new_matches_game_surfaces_combined = feature_combiner_match(data, 'Yes', 'All', 'All', 'game', 'full')
+    new_matches_game_year_surfaces_combined = feature_combiner_match(data, 'Yes', 'All', 'All', 'game', 'year')
+    new_matches_game_sets_combined = feature_combiner_match(data, 'All', 'Yes', 'All', 'game', 'full')
+    new_matches_game_surfaces_sets_combined = feature_combiner_match(data, 'Yes', 'Yes', 'All', 'game', 'full')
 
     new_matches_sets_combined = pd.merge(new_matches_opponent, new_matches_sets_combined)
     new_matches_sets_combined = pd.merge(new_matches_win, new_matches_sets_combined)
+    new_matches_sets_combined = pd.merge(new_matches_win_year, new_matches_sets_combined)
     new_matches_sets_combined = pd.merge(new_matches_sets_combined, new_matches_surfaces_combined)
+    new_matches_sets_combined = pd.merge(new_matches_sets_combined, new_matches_year_surfaces_combined)
     new_matches_sets_combined = pd.merge(new_matches_sets_combined, new_matches_surfaces_sets_combined)
     new_matches_game_sets_combined = pd.merge(new_matches_game_opponent, new_matches_game_sets_combined)
     new_matches_game_sets_combined = pd.merge(new_matches_game_win, new_matches_game_sets_combined)
+    new_matches_game_sets_combined = pd.merge(new_matches_game_win_year, new_matches_game_sets_combined)
     new_matches_game_sets_combined = pd.merge(new_matches_game_sets_combined, new_matches_game_surfaces_combined)
+    new_matches_game_sets_combined = pd.merge(new_matches_game_sets_combined, new_matches_game_year_surfaces_combined)
     new_matches_game_sets_combined = pd.merge(new_matches_game_sets_combined, new_matches_game_surfaces_sets_combined)
     full_features = pd.merge(new_matches_sets_combined, new_matches_game_sets_combined)
 
-    return full_features
+    diff = new_matches_game_surfaces_combined['diff_game_win_percentage_surface'] - new_matches_game_year_surfaces_combined['diff_game_win_percentage_year_surface']
+
+    return full_features, diff
 
 
 matches = pd.read_csv('allmatches.csv')
@@ -339,7 +375,7 @@ rem_features = ['B365W', 'B365L', 'EXW', 'EXL', 'LBW', 'LBL', 'PSW',
 for feature in rem_features:
     matches = matches.drop(feature, axis=1)
 
-diff_features = create_diff(matches)
+diff_features, diff = create_diff(matches)
 diff_features.to_csv('./diff_features.csv')
 
 
