@@ -47,7 +47,7 @@ def neural_network(data):
     num_features = len(features_list)
 
     # Split into training and test data first
-    y_train, y_test, x_train_categorical, x_test_categorical = train_test_split(y, x, test_size=0.2,
+    y_train, y_test, x_train_categorical, x_test_categorical = train_test_split(new_y, x, test_size=0.2,
                                                                                 random_state=2)  # can add random_state = int to shuffle the data
 
     # scaler = sklearn.preprocessing.StandardScaler()
@@ -58,13 +58,12 @@ def neural_network(data):
     # Use 'softmax' or 'sigmoid' for output layer
     # Initialise neural network
     model = tensorflow.keras.models.Sequential()
-    model.add(tensorflow.keras.layers.Dense(64, input_dim=num_features, activation='relu'))
-    model.add(tensorflow.keras.layers.Dense(32, activation='relu'))
+    model.add(tensorflow.keras.layers.Dense(32, input_dim=num_features, activation='relu'))
     model.add(tensorflow.keras.layers.Dense(16, activation='relu'))
     model.add(tensorflow.keras.layers.Dense(num_classes, activation='softmax'))
 
     # calculate cross-entropy loss
-    model.compile(loss='categorical_crossentropy', optimizer=Adam(learning_rate=0.0000001), metrics=['accuracy'])
+    model.compile(loss='categorical_crossentropy', optimizer=Adam(learning_rate=0.000001), metrics=['accuracy'])
 
     model.summary()
 
@@ -74,22 +73,21 @@ def neural_network(data):
 
     # Train the model with the new callback
     history = model.fit(y_train, x_train_categorical, batch_size=128, validation_data=(y_test, x_test_categorical),
-                        epochs=2000, callbacks=[modelcheckpoint], validation_split=0.1)
+                        epochs=2000, callbacks=[modelcheckpoint])
+
+    #model.save("model.h5")
+
+    best_model = load_model('best_model.h5')
 
     # evaluate the model
     scores = model.evaluate(y_train, x_train_categorical, verbose=0)
     print("%s: %.2f%%" % (model.metrics_names[1], scores[1] * 100))
 
     # review results
-    train_acc = model.evaluate(y_train, x_train_categorical, verbose=0)
-    test_acc = model.evaluate(y_test, x_test_categorical, verbose=0)
+    train_acc = best_model.evaluate(y_train, x_train_categorical, verbose=0)
+    test_acc = best_model.evaluate(y_test, x_test_categorical, verbose=0)
     print(train_acc)
     print(test_acc)
-
-    # save model and architecture to single file
-    # model.save("model.h5")
-
-    best_model = load_model('best_model.h5')
 
     # for predictions
     # put matches throught create_features call it ausopen22.csv (for example)
@@ -103,14 +101,14 @@ def neural_network(data):
         preds = np.argmax(pred)
         actual_pred.append(preds)
 
-    new_pred = []
-    for i in actual_pred:
-        if i == 0:
-            new_pred.append(1)
-        else:
-            new_pred.append(0)
-    print(new_pred)
-    ausopen22 = ausopen22.assign(predictions=new_pred)
+    #new_pred = []
+    #for i in actual_pred:
+    #    if i == 0:
+    #        new_pred.append(1)
+    #    else:
+    #        new_pred.append(0)
+    #print(new_pred)
+    ausopen22 = ausopen22.assign(predictions=actual_pred)
 
     # add new column for probabilities
     probabilities = best_model.predict(aus_matches)
@@ -141,7 +139,6 @@ def neural_network(data):
         else:
             verdict.append('Wrong')
             wrong += 1
-
     compare['verdict'] = verdict
     accuracy = correct / (correct + wrong)
     print(accuracy)
@@ -151,9 +148,15 @@ def neural_network(data):
 
 new_matches = pd.read_csv('aus_diff_features.csv')
 first_round = new_matches.iloc[28960:29024, :]
-finaldf, results = neural_network(first_round)
-
 second_round = new_matches.iloc[29024:29054, :]
+third_round = new_matches.iloc[29054:29070,:]
+fourth_round = new_matches.iloc[29070:29078,:]
+quarter_finals = new_matches.iloc[29078:29082,:]
+semi_finals = new_matches.iloc[29082:29084,:]
+final = new_matches.iloc[29084,:]
+finaldf, results = neural_network(first_round)
+print(finaldf)
+print(results)
 
 player_0_wins = results[results['outcome'] == 1].reset_index(drop=True)
 player_1_wins = results[results['outcome'] == 0].reset_index(drop=True)
@@ -189,5 +192,7 @@ for i in range(player_1_wins.shape[0]):
 # second_results = neural_network(second_round)
 
 print("--- %s seconds ---" % (time.time() - start_time))
+
+
 
 
