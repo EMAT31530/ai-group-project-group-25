@@ -9,7 +9,7 @@ start_time = time.time()
 # limit data depending on number of sets or type of surface required
 def data_change(data, surface, sets):
 
-    data = data[(data['Comment'] == 'Completed')].reset_index(drop=True)
+    # data = data[(data['Comment'] == 'Completed')].reset_index(drop=True)
 
     if surface != 'All':
         data = data[data['Surface'] == surface].reset_index(drop=True)
@@ -245,9 +245,9 @@ def diff_generator(data, surface, sets, opponent, type, command, timeframe):
 
 
 # add lists as new column in data
-def feature_combiner_match(data):
+def feature_combiner_match(data, diff_rank_data):
 
-    new_aus_matches = diff_rank(aus_matches)
+    new_aus_matches = diff_rank(diff_rank_data)
 
     list_diff_game = diff_generator(data, 'All', 'All', 'All', 'game', 'full', 'full')
     list_diff_game_year = diff_generator(data, 'All', 'All', 'All', 'game', 'full', 'year')
@@ -288,8 +288,16 @@ def feature_combiner_match(data):
 
 matches = pd.read_csv('allmatches.csv')
 
-diff_features = pd.read_csv('diff_features.csv')
-diff_features = diff_features.drop(labels = ['Unnamed: 0', 'Unnamed: 0.1'], axis = 1)
+
+def add_aus_to_diff_features(data):
+
+    diff_features = pd.read_csv('diff_features.csv')
+    diff_features = diff_features.drop(labels = ['Unnamed: 0', 'Unnamed: 0.1'], axis = 1)
+
+    combined_matches = pd.concat([diff_features, data]).reset_index(drop=True)
+
+    return combined_matches, diff_features
+
 
 aus_matches = pd.read_excel('Australian Open 2022.xlsx')
 
@@ -306,9 +314,10 @@ for feature in rem_features:
 
 aus_matches = choose_player(aus_matches)
 aus_matches = aus_matches[(aus_matches['Comment'] == 'Completed')].reset_index(drop=True)
-combined_matches = pd.concat([diff_features, aus_matches]).reset_index(drop=True)
 
-aus_diff_features = feature_combiner_match(combined_matches)
+combined_matches, diff_features = add_aus_to_diff_features(aus_matches)
+
+aus_diff_features = feature_combiner_match(combined_matches, aus_matches)
 new_combined_matches = pd.concat([diff_features, aus_diff_features]).reset_index(drop=True)
 
 new_combined_matches.to_csv('./aus_diff_features.csv')
